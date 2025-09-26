@@ -89,19 +89,25 @@ tar -xJf "${current_path}/.virtpy" 2> /dev/null || :
 rm -rf "${current_path}/.virtpy" 2>/dev/null
 mv "${current_path}/virtpy.sh" /data/data/com.termux/files/usr/bin/virtpy 2>/dev/null && chmod 777 /data/data/com.termux/files/usr/bin/virtpy 2>/dev/null
 mv "${current_path}/virtpip.sh" /data/data/com.termux/files/usr/bin/virtpip 2>/dev/null && chmod 777 /data/data/com.termux/files/usr/bin/virtpip 2>/dev/null
-mv "${current_path}/virtpy.conf" /data/data/com.termux 2>/dev/null && chmod 777 /data/data/com.termux/virtpy.conf 2>/dev/null
+if [[ "$pyver" == "311" ]]; then
+    mv "${current_path}/virtpy.conf" /data/data/com.termux/virtpy.conf 2>/dev/null
+    chmod 777 /data/data/com.termux/virtpy.conf 2>/dev/null
+elif [[ "$pyver" == "312" ]]; then
+    mv "${current_path}/virtpy.conf" /data/data/com.termux/virtpy_312.conf 2>/dev/null
+    chmod 777 /data/data/com.termux/virtpy_312.conf 2>/dev/null
+fi
 
 printf ">> Setup env....\n"
 if [[ "$pyver" == "311" ]]; then
-    virtpy --virtpy-run-python311 >/dev/null 2>&1
+    virtpy --virtpy-run-python311
 elif [[ "$pyver" == "312" ]]; then
-    virtpy --virtpy-run-python312 >/dev/null 2>&1
+    virtpy --virtpy-run-python312 
 fi
 
 printf ">> Installing feature....\n"
 curl "${binurl_download}/feature/limit.py" > /data/data/com.termux/${folder_name}/bin/main.py 2>/dev/null
 chmod 777 /data/data/com.termux/${folder_name}/bin/main.py 2>/dev/null
-virtpip install psutil >/dev/null 2>&1
+virtpip install psutil
 
 printf ">> Install completed!\n\n"
 echo "[Use: 'virtpip' to use PIP, 'virtpy' to use python]"
