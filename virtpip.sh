@@ -9,20 +9,30 @@ installed_versions=()
 if [[ ${#installed_versions[@]} -eq 0 ]]; then
     echo "No virtpy installation found. Please run install.sh first."
     exit 1
-elif [[ ${#installed_versions[@]} -eq 1 ]]; then
-    case "${installed_versions[0]}" in
-        "3.11") virt_path="/data/data/com.termux/virtpy" ;;
-        "3.12") virt_path="/data/data/com.termux/virtpy_312" ;;
-    esac
+fi
+
+if [[ "$1" == "--virtpy-run-python311" ]]; then
+    virt_path="/data/data/com.termux/virtpy"
+    shift
+elif [[ "$1" == "--virtpy-run-python312" ]]; then
+    virt_path="/data/data/com.termux/virtpy_312"
+    shift
 else
-    echo "Multiple Python versions detected:"
-    select ver in "${installed_versions[@]}"; do
-        case $ver in
-            "3.11") virt_path="/data/data/com.termux/virtpy"; break ;;
-            "3.12") virt_path="/data/data/com.termux/virtpy_312"; break ;;
-            *) echo "Invalid choice" ;;
+    if [[ ${#installed_versions[@]} -eq 1 ]]; then
+        case "${installed_versions[0]}" in
+            "3.11") virt_path="/data/data/com.termux/virtpy" ;;
+            "3.12") virt_path="/data/data/com.termux/virtpy_312" ;;
         esac
-    done
+    else
+        echo "Multiple Python versions detected:"
+        select ver in "${installed_versions[@]}"; do
+            case $ver in
+                "3.11") virt_path="/data/data/com.termux/virtpy"; break ;;
+                "3.12") virt_path="/data/data/com.termux/virtpy_312"; break ;;
+                *) echo "Invalid choice" ;;
+            esac
+        done
+    fi
 fi
 # =========================================
 

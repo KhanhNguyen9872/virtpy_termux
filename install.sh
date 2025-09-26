@@ -105,9 +105,21 @@ elif [[ "$pyver" == "312" ]]; then
 fi
 
 printf ">> Installing feature....\n"
-curl "${binurl_download}/feature/limit.py" > /data/data/com.termux/${folder_name}/bin/main.py 2>/dev/null
-chmod 777 /data/data/com.termux/${folder_name}/bin/main.py 2>/dev/null
-virtpip install psutil >/dev/null 2>&1
+
+if [[ "$pyver" == "311" ]]; then
+    virt_path="/data/data/com.termux/virtpy"
+    virt_arg="--virtpy-run-python311"
+elif [[ "$pyver" == "312" ]]; then
+    virt_path="/data/data/com.termux/virtpy_312"
+    virt_arg="--virtpy-run-python312"
+fi
+
+# limit.py
+curl "${binurl_download}/feature/limit.py" > "${virt_path}/bin/main.py" 2>/dev/null
+chmod 777 "${virt_path}/bin/main.py" 2>/dev/null
+
+# psutil (cài pip đúng version)
+virtpip ${virt_arg} install psutil >/dev/null 2>&1
 
 printf ">> Install completed!\n\n"
 echo "[Use: 'virtpip' to use PIP, 'virtpy' to use python]"
