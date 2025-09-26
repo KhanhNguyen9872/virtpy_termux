@@ -21,52 +21,6 @@ if [[ "$(id -u 2>/dev/null)" == "0" ]]; then
     fi
 fi
 
-# ==== Choose installed Python version ====
-installed_versions=()
-[[ -d "/data/data/com.termux/virtpy" ]] && installed_versions+=("3.11")
-[[ -d "/data/data/com.termux/virtpy_312" ]] && installed_versions+=("3.12")
-
-if [[ ${#installed_versions[@]} -eq 0 ]]; then
-    echo "${red}No virtpy installation found. Please run install.sh first.${reset}"
-    exit 1
-elif [[ ${#installed_versions[@]} -eq 1 ]]; then
-    case "${installed_versions[0]}" in
-        "3.11") virt_path="/data/data/com.termux/virtpy" ;;
-        "3.12") virt_path="/data/data/com.termux/virtpy_312" ;;
-    esac
-else
-    echo "Multiple Python versions detected:"
-    select ver in "${installed_versions[@]}"; do
-        case $ver in
-            "3.11") virt_path="/data/data/com.termux/virtpy"; break ;;
-            "3.12") virt_path="/data/data/com.termux/virtpy_312"; break ;;
-            *) echo "Invalid choice" ;;
-        esac
-    done
-fi
-# =========================================
-
-user_termux="$(whoami)"
-working_dir="$(pwd)"
-
-## CONFIG
-data_config="$(cat "${virt_path}.conf")"
-if [[ "$(printf "$data_config" | grep 'mount_termux_dir' | head -n 1 | sed 's/=/ /' | awk '{print $2}')" == "1" ]] 2>/dev/null; then
-    mount_termux_dir=1
-    name_mount_termux_dir="${red}ENABLED${reset}"
-else
-    mount_termux_dir=0
-    name_mount_termux_dir="${green}DISABLED${reset}"
-fi
-if [[ "$(printf "$data_config" | grep 'disable_mount_dir' | head -n 1 | sed 's/=/ /' | awk '{print $2}')" == "1" ]] 2>/dev/null; then
-    disable_mount_dir=1
-    name_disable_mount_dir="${red}ENABLED${reset}"
-else
-    disable_mount_dir=0
-    name_disable_mount_dir="${green}DISABLED${reset}"
-fi
-#####
-## CHECK ARG
 
 if [[ "$1" == "--virtpy-help" ]] 2>/dev/null; then
     echo "${0} [launch python shell]"
@@ -125,6 +79,75 @@ if [[ "$1" == "--virtpy-reinstall" ]]; then
     exit 0
 fi
 
+# ==== Choose installed Python version ====
+installed_versions=()
+[[ -d "/data/data/com.termux/virtpy" ]] && installed_versions+=("3.11")
+[[ -d "/data/data/com.termux/virtpy_312" ]] && installed_versions+=("3.12")
+
+if [[ ${#installed_versions[@]} -eq 0 ]]; then
+    echo "${red}No virtpy installation found. Please run install.sh first.${reset}"
+    exit 1
+elif [[ ${#installed_versions[@]} -eq 1 ]]; then
+    case "${installed_versions[0]}" in
+        "3.11") virt_path="/data/data/com.termux/virtpy" ;;
+        "3.12") virt_path="/data/data/com.termux/virtpy_312" ;;
+    esac
+else
+    # Nếu đang setup env (chưa có file .virtpy trong bất kỳ phiên bản nào) → chọn version mặc định là phiên bản đầu tiên
+    need_setup=1
+    for v in "${installed_versions[@]}"; do
+        case "$v" in
+            "3.11") check_path="/data/data/com.termux/virtpy/usr/etc/.virtpy" ;;
+            "3.12") check_path="/data/data/com.termux/virtpy_312/usr/etc/.virtpy" ;;
+        esac
+        if [[ -f "$check_path" ]]; then
+            need_setup=0
+        fi
+    done
+
+    if [[ $need_setup -eq 1 ]]; then
+        # Đang setup env lần đầu → chọn 3.11 nếu có, nếu không thì 3.12
+        if [[ " ${installed_versions[*]} " =~ "3.11" ]]; then
+            virt_path="/data/data/com.termux/virtpy"
+        else
+            virt_path="/data/data/com.termux/virtpy_312"
+        fi
+    else
+        # Bình thường thì cho phép chọn
+        echo "Multiple Python versions detected:"
+        select ver in "${installed_versions[@]}"; do
+            case $ver in
+                "3.11") virt_path="/data/data/com.termux/virtpy"; break ;;
+                "3.12") virt_path="/data/data/com.termux/virtpy_312"; break ;;
+                *) echo "Invalid choice" ;;
+            esac
+        done
+    fi
+fi
+# =========================================
+
+user_termux="$(whoami)"
+working_dir="$(pwd)"
+
+## CONFIG
+data_config="$(cat "${virt_path}.conf")"
+if [[ "$(printf "$data_config" | grep 'mount_termux_dir' | head -n 1 | sed 's/=/ /' | awk '{print $2}')" == "1" ]] 2>/dev/null; then
+    mount_termux_dir=1
+    name_mount_termux_dir="${red}ENABLED${reset}"
+else
+    mount_termux_dir=0
+    name_mount_termux_dir="${green}DISABLED${reset}"
+fi
+if [[ "$(printf "$data_config" | grep 'disable_mount_dir' | head -n 1 | sed 's/=/ /' | awk '{print $2}')" == "1" ]] 2>/dev/null; then
+    disable_mount_dir=1
+    name_disable_mount_dir="${red}ENABLED${reset}"
+else
+    disable_mount_dir=0
+    name_disable_mount_dir="${green}DISABLED${reset}"
+fi
+#####
+## CHECK ARG
+
 if [ ! -f ${virt_path}/usr/bin/bash ] || [ ! -d ${virt_path}/bin ]; then
     printf "${red}virtpy has been destroyed\nPlease reinstall virtpy, using ${0} --virtpy-reinstall${reset}\n"
     exit 64
@@ -136,9 +159,13 @@ if [[ "$1" == "--virtpy-settings" ]] 2>/dev/null; then
         printf "\n${1}=${2}" >> "${virt_path}.conf"
     }
     keep="1"
+    virt_version="unknown"
+    [[ "$virt_path" == "/data/data/com.termux/virtpy" ]] && virt_version="Python 3.11"
+    [[ "$virt_path" == "/data/data/com.termux/virtpy_312" ]] && virt_version="Python 3.12"
+
     while [[ "$keep" == "1" ]] 2>/dev/null; do 
         clear
-        printf "${light_cyan}> VIRTPY SETTINGS <${reset}\n"
+        printf "${light_cyan}> VIRTPY SETTINGS (${virt_version}) <${reset}\n"
         printf "${yellow}1. ${orange}Mount Termux Dir (com.termux/files) ${reset}[${name_mount_termux_dir}]\n"
         printf "${yellow}2. ${orange}Disable Mount Dir (Option 2) ${reset}[${name_disable_mount_dir}]\n"
         printf "${yellow}3. ${orange}Block website (domain name)\n"
