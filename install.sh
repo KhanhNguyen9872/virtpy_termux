@@ -2,13 +2,35 @@
 rm -rf "install.sh" 2>/dev/null
 bash_ver="$(bash --version 2>/dev/null | awk '{print $5}' | head -n 1)"
 
-if [[ "${bash_ver}" != "(aarch64-unknown-linux-android)" ]] 2>/dev/null || [[ "${bash_ver}" != "(aarch64-unknown-linux-android)" ]] 2>/dev/null; then
+if [[ "${bash_ver}" != "(aarch64-unknown-linux-android)" ]]; then
     echo "virtpy_termux only work on Termux [ARM64/ARM]"
     exit 1
 fi
 
 binurl_download="https://raw.githubusercontent.com/KhanhNguyen9872/virtpy_termux/main"
-release_download="https://github.com/KhanhNguyen9872/virtpy_termux/releases/download/py311"
+
+echo "Choose Python version to install:"
+echo "  1) Python 3.11 (default)"
+echo "  2) Python 3.12 (new)"
+echo "  3) Python 3.13 (coming soon, not yet available)"
+read -p "Select [1-3]: " ver_choose
+
+case "$ver_choose" in
+    2)
+        pyver="312"
+        release_download="https://github.com/KhanhNguyen9872/virtpy_termux/releases/download/py311"
+        folder_name="virtpy_312"
+        ;;
+    3)
+        echo "Python 3.13 is coming soon, not available yet."
+        exit 1
+        ;;
+    *)
+        pyver="311"
+        release_download="https://github.com/KhanhNguyen9872/virtpy_termux/releases/download/py311"
+        folder_name="virtpy"
+        ;;
+esac
 
 printf "\n>> Installing package....\n"
 
@@ -18,45 +40,30 @@ printf "deb https://packages-cf.termux.dev/apt/termux-x11 x11 main\n" >> /data/d
 
 apt update -y || exit 1
 apt upgrade -y || exit 1
-apt update -y || exit 1
 apt install python3 wget p7zip which proot -y || exit 1
 
 clear
 printf ">> Checking Termux ARCH.... "
 sleep 1
 aarch="$(lscpu | grep -w "Architecture:" | awk '{print $2}')"
-if [[ $aarch == "armv8l" ]] 2> /dev/null || [[ $aarch == "armv7l" ]] 2> /dev/null; then
-	printf "(ARM)\n"
-	aarch="ARM"
-	binurl_download="${binurl_download}/bin32"
+if [[ $aarch == "armv8l" ]] || [[ $aarch == "armv7l" ]]; then
+    printf "(ARM)\n"
+    aarch="ARM"
+    binurl_download="${binurl_download}/bin32"
 else
-    if [[ $aarch == "aarch64" ]] 2> /dev/null; then
-    	printf "(ARM64)\n"
-    	aarch="ARM64"
+    if [[ $aarch == "aarch64" ]]; then
+        printf "(ARM64)\n"
+        aarch="ARM64"
     else
-    	printf "(NOT SUPPORTED)\n"
-    	exit 1
-   	fi
-fi
-
-if [[ "$(virtpy -V 2>/dev/null)" != "" ]]; then
-    printf ">> FOUND VIRTPY INSTALLED\n"
-    printf "Do you want to reinstall? [Y/*]: "
-    read choose
-    if [[ "$choose" == "y" ]] || [[ "$choose" == "Y" ]] 2>/dev/null; then
-        rm -rf /data/data/com.termux/virtpy* 2>/dev/null
-        rm -rf /data/data/com.termux/files/usr/bin/virtpy* 2>/dev/null
-        rm -rf /data/data/com.termux/files/usr/bin/virtpip* 2>/dev/null
-    else
-        echo "Exiting...."
-        exit 0
+        printf "(NOT SUPPORTED)\n"
+        exit 1
     fi
 fi
 
 printf ">> Downloading file....\n"
 current_path="$(pwd)"
-wget -q --show-progress -O "virtpy.7z" "${release_download}/virtpy_${aarch}.7z" || exit 1
-wget -q --show-progress -O "virtpy.sha512sum" "${release_download}/virtpy_${aarch}.sha512sum" 2> /dev/null || exit 1
+wget -q --show-progress -O "virtpy.7z" "${release_download}/virtpy_${pyver}_${aarch}.7z" || exit 1
+wget -q --show-progress -O "virtpy.sha512sum" "${release_download}/virtpy_${pyver}_${aarch}.sha512sum" 2> /dev/null || exit 1
 wget -q --show-progress -O virtpy.sh "${binurl_download}/virtpy.sh" 2> /dev/null || exit 1
 wget -q --show-progress -O virtpip.sh "${binurl_download}/virtpip.sh" 2> /dev/null || exit 1
 wget -q --show-progress -O virtpy.conf "${binurl_download}/virtpy.conf" 2> /dev/null || exit 1
@@ -80,17 +87,16 @@ printf ">> Installing file....\n"
 cd /data/data/com.termux 2>/dev/null
 tar -xJf "${current_path}/.virtpy" 2> /dev/null || :
 rm -rf "${current_path}/.virtpy" 2>/dev/null
-mv "${current_path}/virtpy.sh" /data/data/com.termux/files/usr/bin/virtpy 2> /dev/null && chmod 777 /data/data/com.termux/files/usr/bin/virtpy 2> /dev/null
-mv "${current_path}/virtpip.sh" /data/data/com.termux/files/usr/bin/virtpip 2> /dev/null && chmod 777 /data/data/com.termux/files/usr/bin/virtpip 2> /dev/null
-mv "${current_path}/virtpy.conf" /data/data/com.termux 2> /dev/null && chmod 777 /data/data/com.termux/virtpy.conf 2> /dev/null
+mv "${current_path}/virtpy.sh" /data/data/com.termux/files/usr/bin/virtpy 2>/dev/null && chmod 777 /data/data/com.termux/files/usr/bin/virtpy 2>/dev/null
+mv "${current_path}/virtpip.sh" /data/data/com.termux/files/usr/bin/virtpip 2>/dev/null && chmod 777 /data/data/com.termux/files/usr/bin/virtpip 2>/dev/null
+mv "${current_path}/virtpy.conf" /data/data/com.termux 2>/dev/null && chmod 777 /data/data/com.termux/virtpy.conf 2>/dev/null
 
 printf ">> Setup env....\n"
-virtpy >/dev/null 2>&1
+/data/data/com.termux/files/usr/bin/virtpy >/dev/null 2>&1
 
 printf ">> Installing feature....\n"
-# limit
-curl "${binurl_download}/feature/limit.py" > /data/data/com.termux/virtpy/bin/main.py 2>/dev/null
-chmod 777 /data/data/com.termux/virtpy/bin/main.py 2>/dev/null
+curl "${binurl_download}/feature/limit.py" > /data/data/com.termux/${folder_name}/bin/main.py 2>/dev/null
+chmod 777 /data/data/com.termux/${folder_name}/bin/main.py 2>/dev/null
 virtpip install psutil >/dev/null 2>&1
 
 printf ">> Install completed!\n\n"

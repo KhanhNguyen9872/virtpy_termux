@@ -21,7 +21,31 @@ if [[ "$(id -u 2>/dev/null)" == "0" ]]; then
     fi
 fi
 
-virt_path="/data/data/com.termux/virtpy"
+# ==== Choose installed Python version ====
+installed_versions=()
+[[ -d "/data/data/com.termux/virtpy" ]] && installed_versions+=("3.11")
+[[ -d "/data/data/com.termux/virtpy_312" ]] && installed_versions+=("3.12")
+
+if [[ ${#installed_versions[@]} -eq 0 ]]; then
+    echo "${red}No virtpy installation found. Please run install.sh first.${reset}"
+    exit 1
+elif [[ ${#installed_versions[@]} -eq 1 ]]; then
+    case "${installed_versions[0]}" in
+        "3.11") virt_path="/data/data/com.termux/virtpy" ;;
+        "3.12") virt_path="/data/data/com.termux/virtpy_312" ;;
+    esac
+else
+    echo "Multiple Python versions detected:"
+    select ver in "${installed_versions[@]}"; do
+        case $ver in
+            "3.11") virt_path="/data/data/com.termux/virtpy"; break ;;
+            "3.12") virt_path="/data/data/com.termux/virtpy_312"; break ;;
+            *) echo "Invalid choice" ;;
+        esac
+    done
+fi
+# =========================================
+
 user_termux="$(whoami)"
 working_dir="$(pwd)"
 
@@ -57,14 +81,42 @@ if [[ "$1" == "--virtpy-help" ]] 2>/dev/null; then
 fi
 
 if [[ "$1" == "--virtpy-uninstall" ]]; then
-    printf "> Do you want to uninstall virtpy? [Y/*]: "
-    read choose
-    if [[ "$choose" == "y" ]] || [[ "$choose" == "Y" ]] 2>/dev/null; then
-        rm -rf /data/data/com.termux/virtpy* 2>/dev/null
-        rm -rf /data/data/com.termux/files/usr/bin/virtpy* 2>/dev/null
-        rm -rf /data/data/com.termux/files/usr/bin/virtpip* 2>/dev/null
-        printf "Completed!\n"
+    installed_versions=()
+    [[ -d "/data/data/com.termux/virtpy" ]] && installed_versions+=("3.11")
+    [[ -d "/data/data/com.termux/virtpy_312" ]] && installed_versions+=("3.12")
+
+    if [[ ${#installed_versions[@]} -eq 0 ]]; then
+        echo "No virtpy installation found."
+        exit 0
     fi
+
+    echo "Installed versions:"
+    for v in "${installed_versions[@]}"; do
+        echo " - $v"
+    done
+    echo " A) Uninstall ALL versions"
+    printf "\nChoose version to uninstall [${installed_versions[*]} / A]: "
+    read choose
+
+    case "$choose" in
+        "3.11")
+            rm -rf /data/data/com.termux/virtpy 2>/dev/null
+            echo "Uninstalled Python 3.11 (virtpy)"
+            ;;
+        "3.12")
+            rm -rf /data/data/com.termux/virtpy_312 2>/dev/null
+            echo "Uninstalled Python 3.12 (virtpy_312)"
+            ;;
+        "A"|"a")
+            rm -rf /data/data/com.termux/virtpy* 2>/dev/null
+            rm -rf /data/data/com.termux/files/usr/bin/virtpy* 2>/dev/null
+            rm -rf /data/data/com.termux/files/usr/bin/virtpip* 2>/dev/null
+            echo "All versions uninstalled!"
+            ;;
+        *)
+            echo "Cancelled."
+            ;;
+    esac
     exit 0
 fi
 
