@@ -92,7 +92,11 @@ mv "${current_path}/virtpip.sh" /data/data/com.termux/files/usr/bin/virtpip 2>/d
 mv "${current_path}/virtpy.conf" /data/data/com.termux 2>/dev/null && chmod 777 /data/data/com.termux/virtpy.conf 2>/dev/null
 
 printf ">> Setup env....\n"
-/data/data/com.termux/files/usr/bin/virtpy >/dev/null 2>&1
+if [[ "$pyver" == "311" ]]; then
+    virtpy --virtpy-run-python311 >/dev/null 2>&1
+elif [[ "$pyver" == "312" ]]; then
+    virtpy --virtpy-run-python312 >/dev/null 2>&1
+fi
 
 printf ">> Installing feature....\n"
 curl "${binurl_download}/feature/limit.py" > /data/data/com.termux/${folder_name}/bin/main.py 2>/dev/null

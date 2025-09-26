@@ -87,33 +87,24 @@ installed_versions=()
 if [[ ${#installed_versions[@]} -eq 0 ]]; then
     echo "${red}No virtpy installation found. Please run install.sh first.${reset}"
     exit 1
-elif [[ ${#installed_versions[@]} -eq 1 ]]; then
-    case "${installed_versions[0]}" in
-        "3.11") virt_path="/data/data/com.termux/virtpy" ;;
-        "3.12") virt_path="/data/data/com.termux/virtpy_312" ;;
-    esac
-else
-    # Nếu đang setup env (chưa có file .virtpy trong bất kỳ phiên bản nào) → chọn version mặc định là phiên bản đầu tiên
-    need_setup=1
-    for v in "${installed_versions[@]}"; do
-        case "$v" in
-            "3.11") check_path="/data/data/com.termux/virtpy/usr/etc/.virtpy" ;;
-            "3.12") check_path="/data/data/com.termux/virtpy_312/usr/etc/.virtpy" ;;
-        esac
-        if [[ -f "$check_path" ]]; then
-            need_setup=0
-        fi
-    done
+fi
 
-    if [[ $need_setup -eq 1 ]]; then
-        # Đang setup env lần đầu → chọn 3.11 nếu có, nếu không thì 3.12
-        if [[ " ${installed_versions[*]} " =~ "3.11" ]]; then
-            virt_path="/data/data/com.termux/virtpy"
-        else
-            virt_path="/data/data/com.termux/virtpy_312"
-        fi
+# Ưu tiên arg để chọn version
+if [[ "$1" == "--virtpy-run-python311" ]]; then
+    virt_path="/data/data/com.termux/virtpy"
+    shift
+elif [[ "$1" == "--virtpy-run-python312" ]]; then
+    virt_path="/data/data/com.termux/virtpy_312"
+    shift
+else
+    if [[ ${#installed_versions[@]} -eq 1 ]]; then
+        # Nếu chỉ có 1 bản thì auto chọn
+        case "${installed_versions[0]}" in
+            "3.11") virt_path="/data/data/com.termux/virtpy" ;;
+            "3.12") virt_path="/data/data/com.termux/virtpy_312" ;;
+        esac
     else
-        # Bình thường thì cho phép chọn
+        # Nếu có nhiều bản → hỏi user chọn
         echo "Multiple Python versions detected:"
         select ver in "${installed_versions[@]}"; do
             case $ver in
